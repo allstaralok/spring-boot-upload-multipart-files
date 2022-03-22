@@ -2,7 +2,9 @@ package com.bezkoder.spring.files.upload.controller;
 
 import com.bezkoder.spring.files.upload.message.ResponseMessage;
 import com.bezkoder.spring.files.upload.model.FileInfo;
+import com.bezkoder.spring.files.upload.model.UploadIds;
 import com.bezkoder.spring.files.upload.service.FilesStorageService;
+import com.bezkoder.spring.files.upload.utils.UTILS;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -26,20 +28,23 @@ public class FilesController {
   FilesStorageService storageService;
 
   @PostMapping("/upload")
-  public ResponseEntity<ResponseMessage> uploadFiles(@RequestParam("files") MultipartFile[] files) {
+  public ResponseEntity<UploadIds[]> uploadFiles(@RequestParam("files") MultipartFile[] files) {
     String message = "";
+    UploadIds  uploadIds[] = new UploadIds[files.length];
     try {
-      List<String> fileNames = new ArrayList<>();
-      Arrays.asList(files).stream().forEach(file -> {
-        storageService.save(file);
-        fileNames.add(file.getOriginalFilename());
-      });
-      message = ""+fileNames;
 
-      return ResponseEntity.status(HttpStatus.OK).body(new ResponseMessage(message));
+      for (int i = 0; i < files.length; i++) {
+        long unixTime = System.currentTimeMillis() / 1000L;
+        uploadIds[i] = new UploadIds();
+        uploadIds[i].setFileUid(UTILS.getSaltString());
+        uploadIds[i].setTimeStamp(unixTime);
+        uploadIds[i].setUploaded(true);
+      }
+
+      return ResponseEntity.status(HttpStatus.OK).body(uploadIds);
     } catch (Exception e) {
       message = "Fail to upload files!";
-      return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(new ResponseMessage(message));
+      return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(uploadIds);
     }
   }
 
