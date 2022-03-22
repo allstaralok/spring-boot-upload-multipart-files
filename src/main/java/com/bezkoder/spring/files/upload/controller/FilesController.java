@@ -1,10 +1,11 @@
 package com.bezkoder.spring.files.upload.controller;
 
-import com.bezkoder.spring.files.upload.message.ResponseMessage;
 import com.bezkoder.spring.files.upload.model.FileInfo;
-import com.bezkoder.spring.files.upload.model.UploadIds;
+import com.bezkoder.spring.files.upload.model.RequestFIleInfo;
+import com.bezkoder.spring.files.upload.model.UploadId;
 import com.bezkoder.spring.files.upload.service.FilesStorageService;
-import com.bezkoder.spring.files.upload.utils.UTILS;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -15,9 +16,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBuilder;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Controller
@@ -28,23 +28,41 @@ public class FilesController {
   FilesStorageService storageService;
 
   @PostMapping("/upload")
-  public ResponseEntity<UploadIds[]> uploadFiles(@RequestParam("files") MultipartFile[] files) {
+  public ResponseEntity< UploadId []> uploadFiles(@RequestParam("files") MultipartFile[] files, @RequestParam(value = "uploadContentInfo", required = false) Optional<String> info) {
     String message = "";
-    UploadIds  uploadIds[] = new UploadIds[files.length];
+    UploadId uploadId[] = new UploadId[files.length];
+    //System.out.println(info);
+
+
+    ObjectMapper objectMapper = new ObjectMapper();
+    RequestFIleInfo requestFIleInfo = null;
+    try {
+      if(info.isPresent())
+      requestFIleInfo = objectMapper.readValue( info.get(),RequestFIleInfo.class);
+      System.out.println(requestFIleInfo);
+    } catch (JsonProcessingException e) {
+      e.printStackTrace();
+    }
+
     try {
 
       for (int i = 0; i < files.length; i++) {
         long unixTime = System.currentTimeMillis() / 1000L;
-        uploadIds[i] = new UploadIds();
-        uploadIds[i].setFileUid(UTILS.getSaltString());
-        uploadIds[i].setTimeStamp(unixTime);
-        uploadIds[i].setUploaded(true);
+        uploadId[i] = new UploadId();
+        if(requestFIleInfo != null && requestFIleInfo.getFile_uid()[i] !=null) {
+          System.out.println(requestFIleInfo.getFile_uid()[i]);
+          uploadId[i].setFileUid(""+requestFIleInfo.getFile_uid()[i]);
+        }
+
+        else{uploadId[i].setFileUid("");}
+        uploadId[i].setTimeStamp(unixTime);
+        uploadId[i].setUploaded(true);
       }
 
-      return ResponseEntity.status(HttpStatus.OK).body(uploadIds);
+      return ResponseEntity.status(HttpStatus.OK).body(uploadId);
     } catch (Exception e) {
       message = "Fail to upload files!";
-      return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(uploadIds);
+      return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(null);
     }
   }
 
